@@ -1,133 +1,216 @@
 package edu.ilstu;
 
-import java.awt.*;
+import java.awt.EventQueue;
+import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import javax.swing.Timer;
 
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import java.awt.Color;
 
-import javafx.scene.input.KeyEvent;
+import javax.swing.JButton;
+import javax.swing.JTextField;
 
-public class MazeBuilt extends JFrame{
+public class MazeBuilt {
 
-	private JFrame frmMaze;
-	private JTextField textFieldStatus;
+	private JFrame frame;
+	private JTextField textField;
+	private JButton btnLoad;
+	private JButton btnStart;
+	private MazePanel panel;
+	private Timer timer;
 	MazeReader maz;
 	MazeSolver mazSolv;
-	
-	//The maze to be displayed
-	
+	Maze passedMaze;
 	private char [][] maze;
-		/*{ {1,1,1,1,1,1,1,1,1,1,1,1,1},
-			{1,5,1,0,1,0,1,0,0,0,0,0,1}, //start point 5 at (1,1)
-			{1,0,1,0,0,0,1,0,1,1,1,0,1},
-			{1,0,0,0,1,1,1,0,0,0,0,0,1},
-			{1,0,1,0,0,0,0,0,1,1,1,0,1},
-			{1,0,1,0,1,1,1,0,1,0,0,0,1},
-			{1,0,1,0,1,0,0,0,1,1,1,0,1},
-			{1,0,1,0,1,1,1,0,1,0,1,0,1},
-			{1,0,0,0,0,0,0,0,0,0,1,9,1}, //end point 9 at (11,8)
-			{1,1,1,1,1,1,1,1,1,1,1,1,1}
-
-		};*/
 	//Path
-	private final ArrayList<Integer> path = new ArrayList<Integer>();
+	private ArrayList<Node> path, prevPath;
+	private Node n;
+	private JButton btnAdvance;
 	private int pathIndex;
-
+	
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		SwingUtilities.invokeLater(new Runnable() {
+		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
 					MazeBuilt window = new MazeBuilt();
-					window.setVisible(true);
-					
+					window.frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 		});
 	}
-	
+
 	/**
 	 * Create the application.
 	 */
 	public MazeBuilt() {
-		//initialize();
-		setTitle("Maze");
-		setBounds(100, 100, 750, 650);
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		initialize();
+	
+		btnLoad.addActionListener(new ActionListener(){///btn
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	panel = new MazePanel();
+        		panel.setBounds(10, 42, 750, 650);
+        		frame.getContentPane().add(panel);
+        		
+            	maz = new MazeReader();
+            	maze = maz.getMaze();
+    			passedMaze = new Maze(maze);
+                panel.repaint();
+                maz.toString();
+                
+                path = new ArrayList<Node>();
+                prevPath = new ArrayList<Node>();
+                
+                textField.setText("Maze loaded");
+            }
+           
+        });/////btn
 		
-		/*DFS.searchPath(maze, 1, 1, path);
-		pathIndex = path.size() - 2;
-		System.out.println(path);*/
+		btnStart.addActionListener(new ActionListener(){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	btnAdvance.setVisible(true);
+            	
+            	mazSolv = new MazeSolver(maze);
+        		mazSolv.findStart();
+        		n = mazSolv.solveMaze(path);
+        		if(n != null) {
+        			pathIndex = 0;
+                    panel.repaint();
+                    textField.setText("Solution in progress");
+        		} else {
+        			textField.setText("Solution Complete: finish not reachable");
+        		}
+            }
+        });
+		
+		btnAdvance.addActionListener(new ActionListener(){
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	if (pathIndex < path.size()) {
+            		pathIndex++;
+            	} 
+            	panel.repaint();
+            
+            	if(pathIndex == path.size() -1 && n != null) {
+            		textField.setText("Solution Complete: finish at " + Integer.toString(0) + 
+            		" in "  + Integer.toString(path.size()) + " moves");
+                }
+            }
+        });
+	}
+
+	/**
+	 * Panel to call maze loader
+	 */
+		
+	private class MazePanel extends JPanel {
+		@Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            
+            passedMaze.drawMaze(g);
+            
+            if(!path.isEmpty() && n != null) {
+            	passedMaze.searchPath(pathIndex, g);
+            }
+            
+            if(pathIndex == path.size() -1 && n != null) {
+            	passedMaze.shortestPath(g);
+            }
+        }
+	
 	}
 	
 	/**
-	 * Draw the maze
+	 * Draw maze
 	 */
-	@Override
-	public void paint(Graphics g) {
-		super.paint(g);
+	
+	private class Maze {
+		char mz[][];
 		
-		maz = new MazeReader();
-		maze = maz.getMaze();
-		mazSolv = new MazeSolver(maze);
+		public Maze(char mz[][]) {
+			this.mz = mz;
+		}
 		
-		mazSolv.findStart();
-		mazSolv.solveMaze();
-		
-		g.translate(50, 50);
-		for (int row = 0; row < maze.length; row++) {
-			for (int col = 0; col < maze[0].length; col++) {
-				Color color;
-				switch (maze[row][col]) {
-					case '#': color = Color.BLACK; break;
-					case 'o': color = Color.BLUE; break;
-					case '*': color = Color.GREEN; break;
-					default: color = Color.WHITE; 
+		public void drawMaze(Graphics g) {
+			g.translate(50, 50);
+			for (int row = 0; row < mz.length; row++) {
+				for (int col = 0; col < mz[0].length; col++) {
+					Color color;
+					switch (mz[row][col]) {
+						case '#': color = Color.BLACK; break;
+						default: color = Color.WHITE; 
+					}
+					g.setColor(color);
+					g.fillRect(50 * col, 50 * row, 50, 50);
+					g.drawRect(50 * col, 50 * row, 50, 50);
 				}
-				g.setColor(color);
-				g.fillRect(50 * col, 50 * row, 50, 50);
-				//g.setColor(Color.WHITE);
-				g.drawRect(50 * col, 50 * row, 50, 50);
 			}
 		}
 		
-		for (int p = 0; p < path.size();p += 2) {
-			int pathX = path.get(p);
-			int pathY = path.get(p + 1);
-			g.setColor(Color.YELLOW);
-			g.fillRect(pathX * 30, pathY * 30, 30, 30);
+		public void searchPath(int p, Graphics g) {
+			int pathX = path.get(p).x;
+			int pathY = path.get(p).y;
+			g.setColor(Color.LIGHT_GRAY);
+			g.fillRect(pathX * 50, pathY * 50, 50, 50);
+			
+			for (int i=0; i < prevPath.size(); i++) {
+				int prvPathX = prevPath.get(i).x;
+				int prvPathY = prevPath.get(i).y;
+				g.setColor(Color.LIGHT_GRAY);
+				g.fillRect(50 * prvPathX, 50 * prvPathY, 50, 50);
+			}
+			
+			prevPath.add(path.get(p));
+		}
+		
+		public void shortestPath(Graphics g) {
+			while(n.getN() != null) {
+				n = n.getN();
+				int pathX = n.x;
+				int pathY = n.y;
+				g.setColor(Color.RED);
+				g.fillOval(50 * pathX, 50 * pathY, 50, 50);
+			}
 		}
 	}
-	
 	/**
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		frmMaze = new JFrame();
-		frmMaze.setTitle("Maze");
-		frmMaze.setBounds(100, 100, 450, 300);
-		frmMaze.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frmMaze.getContentPane().setLayout(null);
+		frame = new JFrame();
+		frame.setBounds(100, 100, 800, 700);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
 		
-		JButton btnLoad = new JButton("Load");
-		btnLoad.setFont(new Font("Tahoma", Font.BOLD, 11));
-		btnLoad.setBounds(22, 11, 69, 23);
-		frmMaze.getContentPane().add(btnLoad);
+		textField = new JTextField();
+		textField.setBounds(207, 11, 272, 20);
+		frame.getContentPane().add(textField);
+		textField.setColumns(10);
+		textField.setText("No Maze");
 		
-		JButton btnStart = new JButton("Start");
-		btnStart.setFont(new Font("Tahoma", Font.BOLD, 11));
-		btnStart.setBounds(101, 11, 69, 23);
-		frmMaze.getContentPane().add(btnStart);
+		btnLoad = new JButton("Load");
+		btnLoad.setBounds(29, 10, 79, 23);
+		frame.getContentPane().add(btnLoad);
 		
-		textFieldStatus = new JTextField();
-		textFieldStatus.setFont(new Font("Tahoma", Font.BOLD, 12));
-		textFieldStatus.setEditable(false);
-		textFieldStatus.setBounds(195, 11, 206, 20);
-		frmMaze.getContentPane().add(textFieldStatus);
-		textFieldStatus.setColumns(10);
+		btnStart = new JButton("Start");
+		btnStart.setBounds(118, 10, 79, 23);
+		frame.getContentPane().add(btnStart);
+		
+		btnAdvance = new JButton("Advance");
+		btnAdvance.setBounds(519, 10, 79, 23);
+		frame.getContentPane().add(btnAdvance);
+		btnAdvance.setVisible(false);
+	
 	}
 }
