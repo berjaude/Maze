@@ -5,7 +5,6 @@ import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import javax.swing.Timer;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -13,6 +12,7 @@ import java.awt.Color;
 
 import javax.swing.JButton;
 import javax.swing.JTextField;
+import javax.swing.Timer;
 
 public class MazeBuilt {
 
@@ -29,7 +29,6 @@ public class MazeBuilt {
 	//Path
 	private ArrayList<Node> path, prevPath;
 	private Node n;
-	private JButton btnAdvance;
 	private int pathIndex;
 	
 	/**
@@ -54,7 +53,7 @@ public class MazeBuilt {
 	public MazeBuilt() {
 		initialize();
 	
-		btnLoad.addActionListener(new ActionListener(){///btn
+		btnLoad.addActionListener(new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent e) {
             	panel = new MazePanel();
@@ -73,38 +72,38 @@ public class MazeBuilt {
                 textField.setText("Maze loaded");
             }
            
-        });/////btn
+        });
+		
+		final ActionListener timerTask = new ActionListener() {
+			public void actionPerformed(ActionEvent evnt) {
+				if (pathIndex < path.size()) {
+            		pathIndex++;
+            	} 
+            	panel.repaint();
+            
+            	if(pathIndex == path.size() -1 && n != null) {
+            		textField.setText("Solution Complete: finish at " + n + 
+            		" in "  + Integer.toString(path.size()) + " moves");
+            		timer.stop();
+                }
+			}
+		};
 		
 		btnStart.addActionListener(new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent e) {
-            	btnAdvance.setVisible(true);
-            	
             	mazSolv = new MazeSolver(maze);
         		mazSolv.findStart();
         		n = mazSolv.solveMaze(path);
         		if(n != null) {
         			pathIndex = 0;
                     panel.repaint();
+                    Timer timer = new Timer(200, timerTask);
+                    timer.start();
                     textField.setText("Solution in progress");
         		} else {
         			textField.setText("Solution Complete: finish not reachable");
         		}
-            }
-        });
-		
-		btnAdvance.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e) {
-            	if (pathIndex < path.size()) {
-            		pathIndex++;
-            	} 
-            	panel.repaint();
-            
-            	if(pathIndex == path.size() -1 && n != null) {
-            		textField.setText("Solution Complete: finish at " + Integer.toString(0) + 
-            		" in "  + Integer.toString(path.size()) + " moves");
-                }
             }
         });
 	}
@@ -149,6 +148,8 @@ public class MazeBuilt {
 					Color color;
 					switch (mz[row][col]) {
 						case '#': color = Color.BLACK; break;
+						case 'o': color = Color.BLUE; break;
+						case '*': color = Color.GREEN; break;
 						default: color = Color.WHITE; 
 					}
 					g.setColor(color);
@@ -206,11 +207,5 @@ public class MazeBuilt {
 		btnStart = new JButton("Start");
 		btnStart.setBounds(118, 10, 79, 23);
 		frame.getContentPane().add(btnStart);
-		
-		btnAdvance = new JButton("Advance");
-		btnAdvance.setBounds(519, 10, 79, 23);
-		frame.getContentPane().add(btnAdvance);
-		btnAdvance.setVisible(false);
-	
 	}
 }
